@@ -3,7 +3,9 @@ package main
 import (
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/clients/tg"
 	config2 "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/config"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model/callbacks"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model/messages"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
 	"log"
 )
 
@@ -18,7 +20,13 @@ func main() {
 		log.Fatal("tg client init failed", err)
 	}
 
-	msgModel := messages.New(tgClient)
+	transactionRepo, err := repository.NewTransactionRepository()
+	if err != nil {
+		log.Fatal("transaction repository init failed", err)
+	}
 
-	tgClient.ListenUpdates(msgModel)
+	msgModel := messages.New(tgClient)
+	callbackModel := callbacks.New(tgClient, transactionRepo)
+
+	tgClient.ListenUpdates(msgModel, callbackModel)
 }

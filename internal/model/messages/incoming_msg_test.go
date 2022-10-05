@@ -2,6 +2,7 @@ package messages
 
 import (
 	"github.com/golang/mock/gomock"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
 	mocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/messages"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestOnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 	sender := mocks.NewMockMessageSender(ctrl)
 	model := New(sender)
 
-	sender.EXPECT().SendMessage("hello", int64(123))
+	sender.EXPECT().SendMessage(constants.HelloMsg, int64(123))
 
 	err := model.IncomingMessage(Message{
 		Text:   "/start",
@@ -30,7 +31,7 @@ func TestOnStartCommand_ShouldAnswerWithUnexpectedMessage(t *testing.T) {
 	sender := mocks.NewMockMessageSender(ctrl)
 	model := New(sender)
 
-	sender.EXPECT().SendMessage("unexpected command", int64(123))
+	sender.EXPECT().SendMessage(constants.UnrecognizedCommandMsg, int64(123))
 
 	err := model.IncomingMessage(Message{
 		Text:   "what?",
