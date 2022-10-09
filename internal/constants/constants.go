@@ -7,9 +7,23 @@ const (
 )
 
 const (
+	RUB = "RUB"
+	USD = "USD"
+	CNY = "CNY"
+	EUR = "EUR"
+)
+
+const (
+	ServerCurrency = RUB
+)
+
+var AllowedCurrencies = []string{RUB, USD, CNY, EUR}
+
+const (
 	Start            = "start"
 	AddOperation     = "add_operation"
 	ShowCategoryList = "show_category_list"
+	ChangeCurrency   = "change_currency"
 	ShowReport       = "show_report"
 )
 
@@ -32,11 +46,15 @@ const (
 )
 
 const (
-	IncorrectAmountClientMsg = "не могу распознать введенную сумму, \n формат записи: 12345 (без пробелов и знаков препинания)"
-	TransactionAddedMsg      = "Трата в категории '%s' на сумму %s руб. добавлена!"
-	SpecifyAmountMsg         = "укажите сумму расхода (руб.): "
-	SpecifyCategoryMsg       = "Выберите категорию:"
-	SpecifyPeriodMsg         = "Выберите желаемый период:"
-	UnrecognizedCommandMsg   = "Неизвестная команда"
-	HelloMsg                 = "привет, друг!"
+	IncorrectAmountClientMsg       = "не могу распознать введенную сумму, \n формат записи: 12345 (без пробелов и знаков препинания)"
+	TransactionAddedMsg            = "Трата в категории '%s' на сумму %s %s добавлена!"
+	SpecifyAmountMsg               = "укажите сумму расхода (%s): "
+	SpecifyCategoryMsg             = "Выберите категорию:"
+	SpecifyPeriodMsg               = "Выберите желаемый период:"
+	SpecifyCurrencyMsg             = "Выберите валюту по умолчанию:"
+	UnrecognizedCommandMsg         = "Неизвестная команда"
+	HelloMsg                       = "привет, друг!"
+	UndefinedCurrencyMsg           = "Бот не поддерживает выбранную вами валюту :("
+	CannotChangeCurrencyMsg        = "Не могу поменять валюту :("
+	CurrencyChangedSuccessfullyMsg = "Валюта успешно изменена на '%s'!"
 )

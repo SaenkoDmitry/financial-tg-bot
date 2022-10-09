@@ -1,9 +1,14 @@
-package repository
+package service
 
 import (
+	"context"
+	"github.com/golang/mock/gomock"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
+	clientMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/clients"
+	repoMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/repository"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
 	"testing"
 	"time"
 )
@@ -14,9 +19,11 @@ var (
 	currentYearDate  = time.Now().Add(time.Hour * -24 * 7 * 10) // -10 weeks until now
 )
 
-var mockTestData = map[int64]map[string][]Transaction{
-	12345: {
-		constants.Education: []Transaction{
+var userID = int64(12345)
+
+var mockTestData = map[int64]map[string][]repository.Transaction{
+	userID: {
+		constants.Education: []repository.Transaction{
 			{
 				Amount: decimal.NewFromInt(2000),
 				Date:   currentWeekDate,
@@ -26,13 +33,13 @@ var mockTestData = map[int64]map[string][]Transaction{
 				Date:   currentMonthDate,
 			},
 		},
-		constants.Beauty: []Transaction{
+		constants.Beauty: []repository.Transaction{
 			{
 				Amount: decimal.NewFromInt(13000),
 				Date:   currentYearDate,
 			},
 		},
-		constants.Clothes: []Transaction{
+		constants.Clothes: []repository.Transaction{
 			{
 				Amount: decimal.NewFromInt(2132134),
 				Date:   currentMonthDate,
@@ -41,9 +48,17 @@ var mockTestData = map[int64]map[string][]Transaction{
 	},
 }
 
-func TestTransactionRepository_CalcByCurrentWeek(t *testing.T) {
+func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	currencyExchangeClient := clientMocks.NewMockCurrencyExtractor(ctrl)
+	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
+	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
+	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
+	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient)
+
 	type fields struct {
-		m map[int64]map[string][]Transaction
+		m map[int64]map[string][]repository.Transaction
 	}
 	type args struct {
 		userID int64
@@ -71,19 +86,28 @@ func TestTransactionRepository_CalcByCurrentWeek(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &TransactionRepository{
-				m: tt.fields.m,
+			f := &FinanceCalculatorService{
+				transactionRepo:      transactionRepo,
+				exchangeRatesService: exchangeRatesService,
 			}
-			got, err := c.CalcByCurrentWeek(tt.args.userID)
+			got, err := f.CalcByCurrentWeek(tt.args.userID, constants.RUB)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got, "CalcByCurrentWeek: got = %v, want %v", got, tt.want)
 		})
 	}
 }
 
-func TestTransactionRepository_CalcByCurrentMonth(t *testing.T) {
+func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	currencyExchangeClient := clientMocks.NewMockCurrencyExtractor(ctrl)
+	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
+	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
+	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
+	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient)
+
 	type fields struct {
-		m map[int64]map[string][]Transaction
+		m map[int64]map[string][]repository.Transaction
 	}
 	type args struct {
 		userID int64
@@ -112,19 +136,28 @@ func TestTransactionRepository_CalcByCurrentMonth(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &TransactionRepository{
-				m: tt.fields.m,
+			f := &FinanceCalculatorService{
+				transactionRepo:      transactionRepo,
+				exchangeRatesService: exchangeRatesService,
 			}
-			got, err := c.CalcByCurrentMonth(tt.args.userID)
+			got, err := f.CalcByCurrentMonth(tt.args.userID, constants.RUB)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got, "CalcByCurrentMonth: got = %v, want %v", got, tt.want)
 		})
 	}
 }
 
-func TestTransactionRepository_CalcByCurrentYear(t *testing.T) {
+func TestFinanceCalculatorService_CalcByCurrentYear(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	currencyExchangeClient := clientMocks.NewMockCurrencyExtractor(ctrl)
+	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
+	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
+	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
+	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient)
+
 	type fields struct {
-		m map[int64]map[string][]Transaction
+		m map[int64]map[string][]repository.Transaction
 	}
 	type args struct {
 		userID int64
@@ -137,7 +170,7 @@ func TestTransactionRepository_CalcByCurrentYear(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "calc by current month",
+			name: "calc by current year",
 			fields: fields{
 				m: mockTestData,
 			},
@@ -154,10 +187,11 @@ func TestTransactionRepository_CalcByCurrentYear(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &TransactionRepository{
-				m: tt.fields.m,
+			f := &FinanceCalculatorService{
+				transactionRepo:      transactionRepo,
+				exchangeRatesService: exchangeRatesService,
 			}
-			got, err := c.CalcByCurrentYear(tt.args.userID)
+			got, err := f.CalcByCurrentYear(tt.args.userID, constants.RUB)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got, "CalcByCurrentYear: got = %v, want %v", got, tt.want)
 		})

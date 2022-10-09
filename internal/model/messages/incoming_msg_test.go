@@ -4,6 +4,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
 	mocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/messages"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,8 @@ func TestOnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	sender := mocks.NewMockMessageSender(ctrl)
-	model := New(sender)
+	userCurrencyRepo, _ := repository.NewUserCurrencyRepository()
+	model := New(sender, userCurrencyRepo)
 
 	sender.EXPECT().SendMessage(constants.HelloMsg, int64(123))
 
@@ -29,7 +31,8 @@ func TestOnStartCommand_ShouldAnswerWithUnexpectedMessage(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	sender := mocks.NewMockMessageSender(ctrl)
-	model := New(sender)
+	userCurrencyRepo, _ := repository.NewUserCurrencyRepository()
+	model := New(sender, userCurrencyRepo)
 
 	sender.EXPECT().SendMessage(constants.UnrecognizedCommandMsg, int64(123))
 

@@ -1,4 +1,4 @@
-package tg
+package telegram
 
 import (
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
@@ -122,6 +122,10 @@ var initialCommands = tgbotapi.NewSetMyCommands(
 	tgbotapi.BotCommand{
 		Command:     constants.ShowCategoryList,
 		Description: "показать список категорий",
+	},
+	tgbotapi.BotCommand{
+		Command:     constants.ChangeCurrency,
+		Description: "сменить валюту",
 	},
 	tgbotapi.BotCommand{
 		Command:     constants.ShowReport,

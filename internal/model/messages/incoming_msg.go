@@ -5,15 +5,19 @@ import (
 	"fmt"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/utils/slices"
 )
 
 type Model struct {
-	tgClient MessageSender
+	tgClient         MessageSender
+	userCurrencyRepo *repository.UserCurrencyRepository
 }
 
-func New(tgClient MessageSender) *Model {
+func New(tgClient MessageSender, userCurrencyRepo *repository.UserCurrencyRepository) *Model {
 	return &Model{
-		tgClient: tgClient,
+		tgClient:         tgClient,
+		userCurrencyRepo: userCurrencyRepo,
 	}
 }
 
@@ -23,6 +27,10 @@ type Message struct {
 }
 
 func (s *Model) IncomingMessage(msg Message) error {
+	userCurrency, err := s.userCurrencyRepo.GetCurrency(msg.UserID)
+	if err != nil || userCurrency == "" {
+		userCurrency = constants.RUB
+	}
 	switch msg.Text {
 	case "/" + constants.Start:
 		return s.tgClient.SendMessage(constants.HelloMsg, msg.UserID)
@@ -30,28 +38,38 @@ func (s *Model) IncomingMessage(msg Message) error {
 		return s.tgClient.SendMessageWithMarkup(constants.SpecifyCategoryMsg, collectCategories(), msg.UserID)
 	case "/" + constants.ShowCategoryList:
 		return s.tgClient.SendMessage(formatCategoryList(constants.CategoryList), msg.UserID)
+	case "/" + constants.ChangeCurrency:
+		return s.tgClient.SendMessageWithMarkup(constants.SpecifyCurrencyMsg, getCurrencies(userCurrency), msg.UserID)
 	case "/" + constants.ShowReport:
-		return s.tgClient.SendMessageWithMarkup(constants.SpecifyPeriodMsg, periods, msg.UserID)
+		return s.tgClient.SendMessageWithMarkup(constants.SpecifyPeriodMsg, getPeriods(), msg.UserID)
 	default:
 		return s.tgClient.SendMessage(constants.UnrecognizedCommandMsg, msg.UserID)
 	}
 }
 
-var periods = [][]model.MarkupData{
-	{
-		{
-			Text: constants.WeekPeriod,
-			Data: fmt.Sprintf("%s:%s", constants.ShowReport, constants.WeekPeriod),
-		},
-		{
-			Text: constants.MonthPeriod,
-			Data: fmt.Sprintf("%s:%s", constants.ShowReport, constants.MonthPeriod),
-		},
-		{
-			Text: constants.YearPeriod,
-			Data: fmt.Sprintf("%s:%s", constants.ShowReport, constants.YearPeriod),
-		},
-	},
+func getCurrencies(userCurrency string) [][]model.MarkupData {
+	result := make([][]model.MarkupData, 0, 1)
+	filtered := slices.Filter(constants.AllowedCurrencies, userCurrency)
+	result = append(result, slices.Map(filtered, func(t string) model.MarkupData {
+		return mapToMarkupData(constants.ChangeCurrency, t)
+	}))
+	return result
+}
+
+func getPeriods() [][]model.MarkupData {
+	result := make([][]model.MarkupData, 0, 1)
+	filtered := []string{constants.WeekPeriod, constants.MonthPeriod, constants.YearPeriod}
+	result = append(result, slices.Map(filtered, func(t string) model.MarkupData {
+		return mapToMarkupData(constants.ShowReport, t)
+	}))
+	return result
+}
+
+func mapToMarkupData(callback, input string) model.MarkupData {
+	return model.MarkupData{
+		Text: input,
+		Data: fmt.Sprintf("%s:%s", callback, input),
+	}
 }
 
 func collectCategories() [][]model.MarkupData {
