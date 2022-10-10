@@ -7,17 +7,8 @@ const (
 )
 
 const (
-	RUB = "RUB"
-	USD = "USD"
-	CNY = "CNY"
-	EUR = "EUR"
+	ServerCurrency = "RUB"
 )
-
-const (
-	ServerCurrency = RUB
-)
-
-var AllowedCurrencies = []string{RUB, USD, CNY, EUR}
 
 const (
 	Start            = "start"

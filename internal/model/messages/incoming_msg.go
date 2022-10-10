@@ -11,10 +11,10 @@ import (
 
 type Model struct {
 	tgClient         MessageSender
-	userCurrencyRepo *repository.UserCurrencyRepository
+	userCurrencyRepo *repository.CurrencyRepository
 }
 
-func New(tgClient MessageSender, userCurrencyRepo *repository.UserCurrencyRepository) *Model {
+func New(tgClient MessageSender, userCurrencyRepo *repository.CurrencyRepository) *Model {
 	return &Model{
 		tgClient:         tgClient,
 		userCurrencyRepo: userCurrencyRepo,
@@ -27,10 +27,6 @@ type Message struct {
 }
 
 func (s *Model) IncomingMessage(msg Message) error {
-	userCurrency, err := s.userCurrencyRepo.GetCurrency(msg.UserID)
-	if err != nil || userCurrency == "" {
-		userCurrency = constants.RUB
-	}
 	switch msg.Text {
 	case "/" + constants.Start:
 		return s.tgClient.SendMessage(constants.HelloMsg, msg.UserID)
@@ -39,7 +35,8 @@ func (s *Model) IncomingMessage(msg Message) error {
 	case "/" + constants.ShowCategoryList:
 		return s.tgClient.SendMessage(formatCategoryList(constants.CategoryList), msg.UserID)
 	case "/" + constants.ChangeCurrency:
-		return s.tgClient.SendMessageWithMarkup(constants.SpecifyCurrencyMsg, getCurrencies(userCurrency), msg.UserID)
+		userCurrencies := s.userCurrencyRepo.GetFilteredByUserCurrencies(msg.UserID)
+		return s.tgClient.SendMessageWithMarkup(constants.SpecifyCurrencyMsg, getCurrencies(userCurrencies), msg.UserID)
 	case "/" + constants.ShowReport:
 		return s.tgClient.SendMessageWithMarkup(constants.SpecifyPeriodMsg, getPeriods(), msg.UserID)
 	default:
@@ -47,10 +44,9 @@ func (s *Model) IncomingMessage(msg Message) error {
 	}
 }
 
-func getCurrencies(userCurrency string) [][]model.MarkupData {
+func getCurrencies(currencies []string) [][]model.MarkupData {
 	result := make([][]model.MarkupData, 0, 1)
-	filtered := slices.Filter(constants.AllowedCurrencies, userCurrency)
-	result = append(result, slices.Map(filtered, func(t string) model.MarkupData {
+	result = append(result, slices.Map(currencies, func(t string) model.MarkupData {
 		return mapToMarkupData(constants.ChangeCurrency, t)
 	}))
 	return result

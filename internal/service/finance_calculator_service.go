@@ -50,7 +50,7 @@ func (c *FinanceCalculatorService) calcBy(userID, days int64, currency string) (
 				if err != nil {
 					return nil, err
 				}
-				multiplier = decimal.NewFromFloat(*temp)
+				multiplier = temp
 			}
 			newAmount := wallet[category][i].Amount.Mul(multiplier)
 			expenses[category] = expenses[category].Add(newAmount)

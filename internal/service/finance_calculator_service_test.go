@@ -6,8 +6,8 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
-	clientMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/clients"
 	repoMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/repository"
+	serviceMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/service"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
 	"testing"
 	"time"
@@ -51,7 +51,7 @@ var mockTestData = map[int64]map[string][]repository.Transaction{
 func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	currencyExchangeClient := clientMocks.NewMockCurrencyExtractor(ctrl)
+	currencyExchangeClient := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
 	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
 	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
@@ -90,7 +90,7 @@ func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
 				transactionRepo:      transactionRepo,
 				exchangeRatesService: exchangeRatesService,
 			}
-			got, err := f.CalcByCurrentWeek(tt.args.userID, constants.RUB)
+			got, err := f.CalcByCurrentWeek(tt.args.userID, constants.ServerCurrency)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got, "CalcByCurrentWeek: got = %v, want %v", got, tt.want)
 		})
@@ -100,7 +100,7 @@ func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
 func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	currencyExchangeClient := clientMocks.NewMockCurrencyExtractor(ctrl)
+	currencyExchangeClient := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
 	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
 	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
@@ -140,7 +140,7 @@ func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
 				transactionRepo:      transactionRepo,
 				exchangeRatesService: exchangeRatesService,
 			}
-			got, err := f.CalcByCurrentMonth(tt.args.userID, constants.RUB)
+			got, err := f.CalcByCurrentMonth(tt.args.userID, constants.ServerCurrency)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got, "CalcByCurrentMonth: got = %v, want %v", got, tt.want)
 		})
@@ -150,7 +150,7 @@ func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
 func TestFinanceCalculatorService_CalcByCurrentYear(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	currencyExchangeClient := clientMocks.NewMockCurrencyExtractor(ctrl)
+	currencyExchangeClient := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
 	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
 	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
@@ -191,7 +191,7 @@ func TestFinanceCalculatorService_CalcByCurrentYear(t *testing.T) {
 				transactionRepo:      transactionRepo,
 				exchangeRatesService: exchangeRatesService,
 			}
-			got, err := f.CalcByCurrentYear(tt.args.userID, constants.RUB)
+			got, err := f.CalcByCurrentYear(tt.args.userID, constants.ServerCurrency)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got, "CalcByCurrentYear: got = %v, want %v", got, tt.want)
 		})

@@ -20,7 +20,7 @@ run:
 
 generate: install-mockgen
 	${MOCKGEN} -source=internal/model/messages/message_sender.go -destination=internal/mocks/messages/messages_mocks.go
-	${MOCKGEN} -source=internal/clients/abstract/currency_client.go -destination=internal/mocks/clients/currency_client.go
+	${MOCKGEN} -source=internal/service/exchange_rates_service.go -destination=internal/mocks/service/exchange_rates_service.go
 	${MOCKGEN} -source=internal/repository/transaction_repo.go -destination=internal/mocks/repository/transaction_repo.go
 
 lint: install-lint

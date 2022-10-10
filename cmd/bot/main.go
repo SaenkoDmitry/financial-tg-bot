@@ -42,7 +42,7 @@ func main() {
 		log.Fatal("transaction repository init failed", err)
 	}
 
-	userCurrencyRepo, err := repository.NewUserCurrencyRepository()
+	userCurrencyRepo, err := repository.NewUserCurrencyRepository(config)
 	if err != nil {
 		log.Fatal("user currency repository init failed", err)
 	}
