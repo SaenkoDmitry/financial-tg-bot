@@ -79,32 +79,58 @@ func (s *Model) handleAddOperationWithSelectedCategory(query *tgbotapi.CallbackQ
 	}
 }
 
-func (s *Model) handleAddOperationWithSelectedCategoryAndAmount(query *tgbotapi.CallbackQuery, params ...string) error {
+type AddOperationInputData struct {
+	UserID    int64
+	MessageID int
+	Category  string
+	Currency  string
+	Amount    decimal.Decimal
+}
+
+func (s *Model) parseAddOperationInputData(params []string, query *tgbotapi.CallbackQuery) (*AddOperationInputData, error) {
+	if len(params) == 0 {
+		return nil, emptyCallbackErr
+	}
 	userID := query.From.ID
 	messageID := query.Message.MessageID
-	if len(params) == 0 {
-		return emptyCallbackErr
-	}
-	categoryName := params[0]
-	userCurrency := constants.ServerCurrency // parse user currency
-	if v, err := s.userCurrencyRepo.GetUserCurrency(userID); err == nil && v != constants.ServerCurrency {
-		userCurrency = v
-	}
-
-	inputAmount, err := decimal.NewFromString(params[1]) // amount in user currency (not equals to server)
+	amount, err := decimal.NewFromString(params[1])
 	if err != nil {
-		return s.tgClient.SendMessage(constants.IncorrectAmountClientMsg, userID)
+		return nil, s.tgClient.SendMessage(constants.IncorrectAmountClientMsg, userID)
+	}
+	return &AddOperationInputData{
+		UserID:    userID,
+		MessageID: messageID,
+		Category:  params[0],
+		Currency:  s.getUserCurrency(userID),
+		Amount:    amount,
+	}, nil
+}
+
+func (s *Model) handleAddOperationWithSelectedCategoryAndAmount(query *tgbotapi.CallbackQuery, params ...string) error {
+	input, err := s.parseAddOperationInputData(params, query)
+	if err != nil {
+		return err
 	}
 
-	amountInServerCurrency := inputAmount // convert to server currency if it is needed
-	if multiplier, err := s.exchangeRatesService.GetMultiplier(userCurrency, time.Now()); err == nil {
-		amountInServerCurrency = inputAmount.Div(multiplier)
+	var serverAmount decimal.Decimal
+	if multiplier, err := s.exchangeRatesService.GetMultiplier(input.Currency, time.Now()); err == nil {
+		serverAmount = input.Amount.Div(multiplier)
+	} else {
+		return s.tgClient.SendEditMessage(fmt.Sprintf(constants.CannotGetRateForYouMsg, constants.ServerCurrency),
+			input.UserID, input.MessageID)
 	}
 
 	// sending result message and save data
-	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, categoryName, inputAmount.String(), userCurrency)
-	_ = s.tgClient.SendEditMessage(transactionAddedText, userID, messageID)
-	return s.transactionRepo.AddOperation(userID, categoryName, amountInServerCurrency)
+	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, input.Category, input.Amount.Round(2).String(), input.Currency)
+	_ = s.tgClient.SendEditMessage(transactionAddedText, input.UserID, input.MessageID)
+	return s.transactionRepo.AddOperation(input.UserID, input.Category, serverAmount)
+}
+
+func (s *Model) getUserCurrency(userID int64) string {
+	if v, err := s.userCurrencyRepo.GetUserCurrency(userID); err == nil && v != constants.ServerCurrency {
+		return v
+	}
+	return constants.ServerCurrency
 }
 
 func (s *Model) handleChangeCurrency(query *tgbotapi.CallbackQuery, params ...string) error {
@@ -143,8 +169,8 @@ func (s *Model) handleShowReport(query *tgbotapi.CallbackQuery, params ...string
 		period = constants.YearPeriod
 		res, err = s.financeCalculatorService.CalcByCurrentYear(userID, selectedCurrency)
 	}
-	if err != nil {
-		return err
+	if errors.Is(err, constants.MissingCurrencyErr) {
+		return s.tgClient.SendMessage(constants.ServerProblemMsg+expenses.Format(res, period, constants.ServerCurrency), userID)
 	}
 	return s.tgClient.SendMessage(expenses.Format(res, period, selectedCurrency), userID)
 }

@@ -102,3 +102,55 @@ func (mr *MockCurrencyExchangerMockRecorder) GetMultiplier(currency, date interf
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultiplier", reflect.TypeOf((*MockCurrencyExchanger)(nil).GetMultiplier), currency, date)
 }
+
+// MockCache is a mock of Cache interface.
+type MockCache struct {
+	ctrl     *gomock.Controller
+	recorder *MockCacheMockRecorder
+}
+
+// MockCacheMockRecorder is the mock recorder for MockCache.
+type MockCacheMockRecorder struct {
+	mock *MockCache
+}
+
+// NewMockCache creates a new mock instance.
+func NewMockCache(ctrl *gomock.Controller) *MockCache {
+	mock := &MockCache{ctrl: ctrl}
+	mock.recorder = &MockCacheMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCache) EXPECT() *MockCacheMockRecorder {
+	return m.recorder
+}
+
+// Add mocks base method.
+func (m *MockCache) Add(k string, x interface{}, d time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Add", k, x, d)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Add indicates an expected call of Add.
+func (mr *MockCacheMockRecorder) Add(k, x, d interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockCache)(nil).Add), k, x, d)
+}
+
+// Get mocks base method.
+func (m *MockCache) Get(k string) (interface{}, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", k)
+	ret0, _ := ret[0].(interface{})
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockCacheMockRecorder) Get(k interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCache)(nil).Get), k)
+}

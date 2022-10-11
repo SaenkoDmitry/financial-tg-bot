@@ -51,11 +51,14 @@ var mockTestData = map[int64]map[string][]repository.Transaction{
 func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
+	defaultExpiration := time.Hour * 24 * 30
+	cleanupInterval := time.Hour
+	simpleCache := NewSimpleCache(context.TODO(), defaultExpiration, cleanupInterval)
 	currencyExchangeClient := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
 	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
 	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
-	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient)
+	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient, simpleCache)
 
 	type fields struct {
 		m map[int64]map[string][]repository.Transaction
@@ -100,11 +103,14 @@ func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
 func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
+	defaultExpiration := time.Hour * 24 * 30
+	cleanupInterval := time.Hour
+	simpleCache := NewSimpleCache(context.TODO(), defaultExpiration, cleanupInterval)
 	currencyExchangeClient := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
 	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
 	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
-	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient)
+	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient, simpleCache)
 
 	type fields struct {
 		m map[int64]map[string][]repository.Transaction
@@ -150,11 +156,14 @@ func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
 func TestFinanceCalculatorService_CalcByCurrentYear(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
+	defaultExpiration := time.Hour * 24 * 30
+	cleanupInterval := time.Hour
+	simpleCache := NewSimpleCache(context.TODO(), defaultExpiration, cleanupInterval)
 	currencyExchangeClient := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	currencyExchangeClient.EXPECT().GetLiveCurrency().Times(1)
 	transactionRepo := repoMocks.NewMockTransactionOperator(ctrl)
 	transactionRepo.EXPECT().GetWallet(userID).Return(mockTestData[userID])
-	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient)
+	exchangeRatesService, _ := NewExchangeRatesService(context.Background(), currencyExchangeClient, simpleCache)
 
 	type fields struct {
 		m map[int64]map[string][]repository.Transaction

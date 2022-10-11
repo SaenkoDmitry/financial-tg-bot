@@ -36,6 +36,7 @@ func (c *FinanceCalculatorService) calcBy(userID, days int64, currency string) (
 	expenses := make(map[string]decimal.Decimal)
 	now := time.Now()
 	wallet := c.transactionRepo.GetWallet(userID)
+	var resErr error
 	for category := range wallet {
 		for i := range wallet[category] {
 			if now.Sub(wallet[category][i].Date).Hours() >= float64(days) {
@@ -46,15 +47,15 @@ func (c *FinanceCalculatorService) calcBy(userID, days int64, currency string) (
 			}
 			multiplier := decimal.NewFromInt(1)
 			if currency != constants.ServerCurrency {
-				temp, err := c.exchangeRatesService.GetMultiplier(currency, wallet[category][i].Date)
-				if err != nil {
-					return nil, err
+				if temp, err := c.exchangeRatesService.GetMultiplier(currency, wallet[category][i].Date); err == nil {
+					multiplier = temp
+				} else {
+					resErr = constants.MissingCurrencyErr
 				}
-				multiplier = temp
 			}
 			newAmount := wallet[category][i].Amount.Mul(multiplier)
 			expenses[category] = expenses[category].Add(newAmount)
 		}
 	}
-	return expenses, nil
+	return expenses, resErr
 }

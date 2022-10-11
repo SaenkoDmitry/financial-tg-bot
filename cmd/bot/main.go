@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -47,7 +48,12 @@ func main() {
 		log.Fatal("user currency repository init failed", err)
 	}
 
-	exchangeRatesService, err := service.NewExchangeRatesService(ctx, abstractClient)
+	defaultExpiration := time.Hour * 24 * 30
+	cleanupInterval := time.Hour
+	//ratesCache := cache.New(defaultExpiration, cleanupInterval)
+	simpleCache := service.NewSimpleCache(ctx, defaultExpiration, cleanupInterval)
+
+	exchangeRatesService, err := service.NewExchangeRatesService(ctx, abstractClient, simpleCache)
 	if err != nil {
 		log.Fatal("exchange rates service init failed", err)
 	}

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
@@ -12,7 +11,7 @@ import (
 
 type ExchangeRatesService struct {
 	client     CurrencyExtractor
-	ratesCache *cache.Cache
+	ratesCache Cache
 }
 
 type CurrencyExtractor interface {
@@ -28,6 +27,9 @@ const cacheTimeFormat = "2006-01-02"
 const defaultExpires = time.Hour * 24 * 30
 
 func (s ExchangeRatesService) GetMultiplier(currency string, date time.Time) (decimal.Decimal, error) {
+	if currency == constants.ServerCurrency {
+		return decimal.NewFromInt(1), nil
+	}
 	key := getCurrencyCacheKey(date) // не зависит от валюты, чтобы экономить запросы в сервис запроса курсов валют
 
 	// hit cache
@@ -70,7 +72,7 @@ func getCurrencyCacheKey(date time.Time) string {
 	return "CURRENCY_" + date.Format(cacheTimeFormat)
 }
 
-func loadCurrencies(ratesCache *cache.Cache, client CurrencyExtractor) {
+func loadCurrencies(ratesCache Cache, client CurrencyExtractor) {
 	key := getCurrencyCacheKey(time.Now())
 	if _, ok := ratesCache.Get(key); !ok { // first initialization of currencies
 		currencies, err := client.GetLiveCurrency()
@@ -86,9 +88,12 @@ func loadCurrencies(ratesCache *cache.Cache, client CurrencyExtractor) {
 	}
 }
 
-func NewExchangeRatesService(ctx context.Context, client CurrencyExtractor) (*ExchangeRatesService, error) {
-	ratesCache := cache.New(defaultExpires, time.Hour)
+type Cache interface {
+	Get(k string) (interface{}, bool)
+	Add(k string, x interface{}, d time.Duration) error
+}
 
+func NewExchangeRatesService(ctx context.Context, client CurrencyExtractor, ratesCache Cache) (*ExchangeRatesService, error) {
 	loadCurrencies(ratesCache, client) // for first run
 	ticker := time.NewTicker(5 * time.Second)
 	go func() {
