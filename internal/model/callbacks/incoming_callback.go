@@ -8,19 +8,30 @@ import (
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/service"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/utils/expenses"
 	"strings"
+	"time"
 )
 
 type Model struct {
-	tgClient        CallbackSender
-	transactionRepo *repository.TransactionRepository
+	tgClient                 CallbackSender
+	transactionRepo          *repository.TransactionRepository
+	userCurrencyRepo         *repository.CurrencyRepository
+	exchangeRatesService     *service.ExchangeRatesService
+	financeCalculatorService *service.FinanceCalculatorService
 }
 
-func New(tgClient CallbackSender, transactionRepo *repository.TransactionRepository) *Model {
+func New(tgClient CallbackSender, transactionRepo *repository.TransactionRepository,
+	userCurrencyRepo *repository.CurrencyRepository,
+	exchangeRatesService *service.ExchangeRatesService,
+	financeCalculatorService *service.FinanceCalculatorService) *Model {
 	return &Model{
-		tgClient:        tgClient,
-		transactionRepo: transactionRepo,
+		tgClient:                 tgClient,
+		transactionRepo:          transactionRepo,
+		userCurrencyRepo:         userCurrencyRepo,
+		exchangeRatesService:     exchangeRatesService,
+		financeCalculatorService: financeCalculatorService,
 	}
 }
 
@@ -43,6 +54,8 @@ func (s *Model) HandleIncomingCallback(query *tgbotapi.CallbackQuery) error {
 		}
 	case constants.ShowReport:
 		err = s.handleShowReport(query, split[1:]...)
+	case constants.ChangeCurrency:
+		err = s.handleChangeCurrency(query, split[1:]...)
 	}
 	return err
 }
@@ -51,7 +64,11 @@ func (s *Model) handleAddOperationWithSelectedCategory(query *tgbotapi.CallbackQ
 	if len(params) == 0 {
 		return emptyCallbackErr
 	}
-	userMsg := constants.SpecifyAmountMsg + strings.Join(params[1:], "")
+	userCurrency := constants.ServerCurrency
+	if v, err1 := s.userCurrencyRepo.GetUserCurrency(query.From.ID); err1 == nil {
+		userCurrency = v
+	}
+	userMsg := fmt.Sprintf(constants.SpecifyAmountMsg, userCurrency) + strings.Join(params[1:], "")
 	msgID := query.Message.MessageID
 	userID := query.From.ID
 	markupData := numericKeyboardAccumulator(query.Data)
@@ -62,42 +79,100 @@ func (s *Model) handleAddOperationWithSelectedCategory(query *tgbotapi.CallbackQ
 	}
 }
 
+type AddOperationInputData struct {
+	UserID    int64
+	MessageID int
+	Category  string
+	Currency  string
+	Amount    decimal.Decimal
+}
+
+func (s *Model) parseAddOperationInputData(params []string, query *tgbotapi.CallbackQuery) (*AddOperationInputData, error) {
+	if len(params) == 0 {
+		return nil, emptyCallbackErr
+	}
+	userID := query.From.ID
+	messageID := query.Message.MessageID
+	amount, err := decimal.NewFromString(params[1])
+	if err != nil {
+		return nil, s.tgClient.SendMessage(constants.IncorrectAmountClientMsg, userID)
+	}
+	return &AddOperationInputData{
+		UserID:    userID,
+		MessageID: messageID,
+		Category:  params[0],
+		Currency:  s.getUserCurrency(userID),
+		Amount:    amount,
+	}, nil
+}
+
 func (s *Model) handleAddOperationWithSelectedCategoryAndAmount(query *tgbotapi.CallbackQuery, params ...string) error {
+	input, err := s.parseAddOperationInputData(params, query)
+	if err != nil {
+		return err
+	}
+
+	var serverAmount decimal.Decimal
+	if multiplier, err := s.exchangeRatesService.GetMultiplier(input.Currency, time.Now()); err == nil {
+		serverAmount = input.Amount.Div(multiplier)
+	} else {
+		return s.tgClient.SendEditMessage(fmt.Sprintf(constants.CannotGetRateForYouMsg, constants.ServerCurrency),
+			input.UserID, input.MessageID)
+	}
+
+	// sending result message and save data
+	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, input.Category, input.Amount.Round(2).String(), input.Currency)
+	_ = s.tgClient.SendEditMessage(transactionAddedText, input.UserID, input.MessageID)
+	return s.transactionRepo.AddOperation(input.UserID, input.Category, serverAmount)
+}
+
+func (s *Model) getUserCurrency(userID int64) string {
+	if v, err := s.userCurrencyRepo.GetUserCurrency(userID); err == nil && v != constants.ServerCurrency {
+		return v
+	}
+	return constants.ServerCurrency
+}
+
+func (s *Model) handleChangeCurrency(query *tgbotapi.CallbackQuery, params ...string) error {
 	if len(params) == 0 {
 		return emptyCallbackErr
 	}
-	categoryName := params[0]
-	amount, err := decimal.NewFromString(params[1])
+	userID := query.From.ID
+	messageID := query.Message.MessageID
+	err := s.userCurrencyRepo.SetUserCurrency(userID, params[0])
 	if err != nil {
-		return s.tgClient.SendMessage(constants.IncorrectAmountClientMsg, query.From.ID)
+		return s.tgClient.SendEditMessage(constants.CannotChangeCurrencyMsg, userID, messageID)
 	}
-	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, categoryName, amount.String())
-	_ = s.tgClient.SendEditMessage(transactionAddedText, query.From.ID, query.Message.MessageID)
-	return s.transactionRepo.AddOperation(query.From.ID, categoryName, amount)
+	return s.tgClient.SendEditMessage(fmt.Sprintf(constants.CurrencyChangedSuccessfullyMsg, params[0]), userID, messageID)
 }
 
 func (s *Model) handleShowReport(query *tgbotapi.CallbackQuery, params ...string) error {
 	if len(params) == 0 {
 		return emptyCallbackErr
 	}
-	var err error
+
+	userID := query.From.ID
+	selectedCurrency, err := s.userCurrencyRepo.GetUserCurrency(userID)
+	if err != nil {
+		selectedCurrency = constants.ServerCurrency
+	}
 	var res map[string]decimal.Decimal
 	var period string
 	switch params[0] {
 	case constants.WeekPeriod:
 		period = constants.WeekPeriod
-		res, err = s.transactionRepo.CalcByCurrentWeek(query.From.ID)
+		res, err = s.financeCalculatorService.CalcByCurrentWeek(userID, selectedCurrency)
 	case constants.MonthPeriod:
 		period = constants.MonthPeriod
-		res, err = s.transactionRepo.CalcByCurrentMonth(query.From.ID)
+		res, err = s.financeCalculatorService.CalcByCurrentMonth(userID, selectedCurrency)
 	case constants.YearPeriod:
 		period = constants.YearPeriod
-		res, err = s.transactionRepo.CalcByCurrentYear(query.From.ID)
+		res, err = s.financeCalculatorService.CalcByCurrentYear(userID, selectedCurrency)
 	}
-	if err != nil {
-		return err
+	if errors.Is(err, constants.MissingCurrencyErr) {
+		return s.tgClient.SendMessage(constants.ServerProblemMsg+expenses.Format(res, period, constants.ServerCurrency), userID)
 	}
-	return s.tgClient.SendMessage(expenses.Format(res, period), query.From.ID)
+	return s.tgClient.SendMessage(expenses.Format(res, period, selectedCurrency), userID)
 }
 
 func numericKeyboardAccumulator(callback string) [][]model.MarkupData {

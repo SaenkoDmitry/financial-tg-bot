@@ -10,8 +10,13 @@ type Transaction struct {
 	Date   time.Time
 }
 
+type TransactionOperator interface {
+	AddOperation(userID int64, categoryName string, amount decimal.Decimal) error
+	GetWallet(userID int64) map[string][]Transaction
+}
+
 type TransactionRepository struct {
-	m map[int64]map[string][]Transaction
+	m map[int64]map[string][]Transaction // map[userID]map[category][]transaction
 }
 
 func NewTransactionRepository() (*TransactionRepository, error) {
@@ -34,33 +39,9 @@ func (c *TransactionRepository) AddOperation(userID int64, categoryName string, 
 	return nil
 }
 
-func (c *TransactionRepository) CalcByCurrentWeek(userID int64) (map[string]decimal.Decimal, error) {
-	return c.calcBy(userID, 24*7)
-}
-
-func (c *TransactionRepository) CalcByCurrentMonth(userID int64) (map[string]decimal.Decimal, error) {
-	return c.calcBy(userID, 24*30)
-}
-
-func (c *TransactionRepository) CalcByCurrentYear(userID int64) (map[string]decimal.Decimal, error) {
-	return c.calcBy(userID, 24*365)
-}
-
-func (c *TransactionRepository) calcBy(userID, days int64) (map[string]decimal.Decimal, error) {
-	expenses := make(map[string]decimal.Decimal)
-	now := time.Now()
-	if wallet, ok := c.m[userID]; ok {
-		for category := range wallet {
-			for i := range wallet[category] {
-				if now.Sub(wallet[category][i].Date).Hours() >= float64(days) {
-					continue
-				}
-				if _, ok2 := expenses[category]; !ok2 {
-					expenses[category] = decimal.Zero
-				}
-				expenses[category] = expenses[category].Add(wallet[category][i].Amount)
-			}
-		}
+func (c *TransactionRepository) GetWallet(userID int64) map[string][]Transaction {
+	if v, ok := c.m[userID]; ok {
+		return v
 	}
-	return expenses, nil
+	return make(map[string][]Transaction)
 }

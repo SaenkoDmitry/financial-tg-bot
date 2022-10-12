@@ -4,12 +4,15 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"os"
+	"strings"
 )
 
 const configFile = "data/config.yaml"
 
 type Config struct {
-	Token string `yaml:"token"`
+	Token          string `yaml:"token"`
+	AbstractAPIKey string `yaml:"abstract_api_key"`
+	Currencies     string `yaml:"currencies"`
 }
 
 type Service struct {
@@ -34,4 +37,12 @@ func New() (*Service, error) {
 
 func (s *Service) Token() string {
 	return s.config.Token
+}
+
+func (s *Service) AbstractAPIKey() string {
+	return s.config.AbstractAPIKey
+}
+
+func (s *Service) Currencies() []string {
+	return strings.Split(s.config.Currencies, ",")
 }
