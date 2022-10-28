@@ -1,8 +1,9 @@
 package telegram
 
 import (
+	"context"
+	"github.com/samber/lo"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
-	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/utils/slices"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -57,12 +58,12 @@ func (c *Client) SendMessageWithMarkup(text string, markup [][]model.MarkupData,
 func buildReplyMarkup(markup [][]model.MarkupData) tgbotapi.InlineKeyboardMarkup {
 	buttons := make([][]tgbotapi.InlineKeyboardButton, 0, len(markup))
 	for i := range markup {
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(slices.Map(markup[i], mapMarkup)...))
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardRow(lo.Map(markup[i], mapMarkup)...))
 	}
 	return tgbotapi.NewInlineKeyboardMarkup(buttons...)
 }
 
-func mapMarkup(t model.MarkupData) tgbotapi.InlineKeyboardButton {
+func mapMarkup(t model.MarkupData, _ int) tgbotapi.InlineKeyboardButton {
 	return tgbotapi.NewInlineKeyboardButtonData(t.Text, t.Data)
 }
 
@@ -84,7 +85,7 @@ func (c *Client) SendEditMessage(text string, userID int64, messageID int) error
 	return nil
 }
 
-func (c *Client) ListenUpdates(msgModel *messages.Model, callbackModel *callbacks.Model) {
+func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Model, callbackModel *callbacks.Model) {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
@@ -93,7 +94,7 @@ func (c *Client) ListenUpdates(msgModel *messages.Model, callbackModel *callback
 
 	for update := range updates {
 		if update.CallbackQuery != nil {
-			err := callbackModel.HandleIncomingCallback(update.CallbackQuery)
+			err := callbackModel.HandleIncomingCallback(ctx, update.CallbackQuery)
 			if err != nil {
 				log.Println(errors.Wrap(err, "error processing callback"))
 				continue
@@ -102,7 +103,7 @@ func (c *Client) ListenUpdates(msgModel *messages.Model, callbackModel *callback
 		if update.Message != nil {
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 
-			err := msgModel.IncomingMessage(messages.Message{
+			err := msgModel.IncomingMessage(ctx, messages.Message{
 				Text:   update.Message.Text,
 				UserID: update.Message.From.ID,
 			})
@@ -122,6 +123,10 @@ var initialCommands = tgbotapi.NewSetMyCommands(
 	tgbotapi.BotCommand{
 		Command:     constants.ShowCategoryList,
 		Description: "показать список категорий",
+	},
+	tgbotapi.BotCommand{
+		Command:     constants.SetLimitation,
+		Description: "установить лимит трат (месяц)",
 	},
 	tgbotapi.BotCommand{
 		Command:     constants.ChangeCurrency,

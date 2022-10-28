@@ -1,6 +1,7 @@
 package abstract
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
@@ -38,9 +39,9 @@ var (
 	CannotUnmarshalResponseMsg = "cannot unmarshal response from abstract currency api in method '%s'"
 )
 
-func (s *CurrencyClient) GetLiveCurrency() (map[string]decimal.Decimal, error) {
+func (s *CurrencyClient) GetLiveCurrency(ctx context.Context) (map[string]decimal.Decimal, error) {
 	method := "v1/live"
-	body, err := s.generalCurrencyRequestMaker(method)
+	body, err := s.generalCurrencyRequestMaker(ctx, method)
 	if err != nil {
 		return nil, err
 	}
@@ -53,10 +54,10 @@ func (s *CurrencyClient) GetLiveCurrency() (map[string]decimal.Decimal, error) {
 
 const historicalDateFormat = "2006-01-02"
 
-func (s *CurrencyClient) GetHistoricalCurrency(day time.Time) (map[string]decimal.Decimal, error) {
+func (s *CurrencyClient) GetHistoricalCurrency(ctx context.Context, day time.Time) (map[string]decimal.Decimal, error) {
 	method := "v1/historical"
 	dateConstraint := fmt.Sprintf("&date=%s", day.Format(historicalDateFormat))
-	body, err := s.generalCurrencyRequestMaker(method, dateConstraint)
+	body, err := s.generalCurrencyRequestMaker(ctx, method, dateConstraint)
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +68,12 @@ func (s *CurrencyClient) GetHistoricalCurrency(day time.Time) (map[string]decima
 	return result.ExchangeRates, nil
 }
 
-func (s *CurrencyClient) generalCurrencyRequestMaker(method string, constraints ...string) ([]byte, error) {
+func (s *CurrencyClient) generalCurrencyRequestMaker(ctx context.Context, method string, constraints ...string) ([]byte, error) {
 	url := fmt.Sprintf("%s/%s?api_key=%s&base=RUB&target=USD,EUR,CNY", s.baseURL, method, s.apiKey)
 	if len(constraints) > 0 {
 		url = fmt.Sprintf("%s&%s", url, strings.Join(constraints, "&"))
 	}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf(CannotCreateReqMsg, method))
 	}
