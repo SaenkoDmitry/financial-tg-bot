@@ -13,6 +13,7 @@ type Config struct {
 	Token                       string        `yaml:"token"`
 	AbstractAPIKey              string        `yaml:"abstract_api_key"`
 	RatesCacheDefaultExpiration time.Duration `yaml:"rates_cache_default_expiration"`
+	CalcCacheDefaultExpiration  time.Duration `yaml:"calc_cache_default_expiration"`
 	RatesCacheCleanupInterval   time.Duration `yaml:"rates_cache_cleanup_interval"`
 	PostgresUser                string        `yaml:"postgres_user"`
 	PostgresPassword            string        `yaml:"postgres_password"`
@@ -51,6 +52,10 @@ func (s *Service) AbstractAPIKey() string {
 
 func (s *Service) RatesCacheDefaultExpiration() time.Duration {
 	return s.config.RatesCacheDefaultExpiration
+}
+
+func (s *Service) CalcCacheDefaultExpiration() time.Duration {
+	return s.config.CalcCacheDefaultExpiration
 }
 
 func (s *Service) RatesCacheCleanupInterval() time.Duration {

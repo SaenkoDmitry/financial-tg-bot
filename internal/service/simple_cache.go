@@ -53,7 +53,7 @@ func NewSimpleCache(ctx context.Context, defaultExpiration, cleanupInterval time
 	return c
 }
 
-func (c *simpleCache) Add(k string, value interface{}, d time.Duration) error {
+func (c *simpleCache) Add(k string, value string, d time.Duration) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.inner[k] = &ValueData{
@@ -63,14 +63,14 @@ func (c *simpleCache) Add(k string, value interface{}, d time.Duration) error {
 	return nil
 }
 
-func (c *simpleCache) Get(k string) (interface{}, bool) {
+func (c *simpleCache) Get(k string) (string, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	if value, ok := c.inner[k]; ok {
 		if value.expired(time.Now().UnixNano()) {
-			return nil, false
+			return "", false
 		}
-		return value.data, true
+		return value.data.(string), true
 	}
-	return nil, false
+	return "", false
 }

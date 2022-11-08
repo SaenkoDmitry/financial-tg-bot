@@ -2,9 +2,12 @@ package callbacks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
+
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/utils"
 
 	"github.com/opentracing/opentracing-go"
 
@@ -65,6 +68,10 @@ func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.Callback
 		return err
 	}
 
+	s.updateCacheForPeriod(input, 7)
+	s.updateCacheForPeriod(input, 30)
+	s.updateCacheForPeriod(input, 365)
+
 	spend, err := s.getSpendSinceStartOfMonth(ctx, input, multiplier)
 	if err != nil {
 		span.SetTag("error", err.Error())
@@ -90,6 +97,23 @@ func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.Callback
 	span.SetTag("adding transaction", "success")
 	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, categories[input.CategoryID].Name, input.Amount.Round(2).String(), input.Currency)
 	return s.tgClient.SendEditMessage(transactionAddedText, input.UserID, input.MessageID)
+}
+
+func (s *Model) updateCacheForPeriod(input *addOperationInputData, days int64) {
+	key := utils.GetCalcCacheKey(input.UserID, input.Currency, days)
+	if v, ok := s.reportCache.Get(key); ok {
+		var temp map[string]decimal.Decimal
+		if err := json.Unmarshal([]byte(v), &temp); err == nil {
+			if _, exists := temp[input.CategoryID]; !exists {
+				temp[input.CategoryID] = decimal.Zero
+			}
+			temp[input.CategoryID] = temp[input.CategoryID].Add(input.Amount)
+			if b, err2 := json.Marshal(temp); err2 == nil {
+				err3 := s.reportCache.Add(key, string(b), time.Hour*24)
+				logger.Warn("cannot save calculated report to cache while adding new operation", zap.Error(err3))
+			}
+		}
+	}
 }
 
 func (s *Model) getSpendSinceStartOfMonth(ctx context.Context, input *addOperationInputData, multiplier decimal.Decimal) (decimal.Decimal, error) {
