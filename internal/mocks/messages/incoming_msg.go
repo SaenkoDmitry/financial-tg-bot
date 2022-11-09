@@ -87,19 +87,19 @@ func (m *MockCategoryStore) EXPECT() *MockCategoryStoreMockRecorder {
 	return m.recorder
 }
 
-// GetCategories mocks base method.
-func (m *MockCategoryStore) GetCategories(ctx context.Context) ([]model.CategoryData, error) {
+// GetAllCategories mocks base method.
+func (m *MockCategoryStore) GetAllCategories(ctx context.Context) ([]model.CategoryData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCategories", ctx)
+	ret := m.ctrl.Call(m, "GetAllCategories", ctx)
 	ret0, _ := ret[0].([]model.CategoryData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCategories indicates an expected call of GetCategories.
-func (mr *MockCategoryStoreMockRecorder) GetCategories(ctx interface{}) *gomock.Call {
+// GetAllCategories indicates an expected call of GetAllCategories.
+func (mr *MockCategoryStoreMockRecorder) GetAllCategories(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategories", reflect.TypeOf((*MockCategoryStore)(nil).GetCategories), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllCategories", reflect.TypeOf((*MockCategoryStore)(nil).GetAllCategories), ctx)
 }
 
 // MockMessageSender is a mock of MessageSender interface.

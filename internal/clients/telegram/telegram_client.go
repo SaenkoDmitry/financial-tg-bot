@@ -2,16 +2,17 @@ package telegram
 
 import (
 	"context"
-	"github.com/samber/lo"
-	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
-	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/config"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model/callbacks"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model/messages"
+	"go.uber.org/zap"
 )
 
 type Client struct {
@@ -90,25 +91,23 @@ func (c *Client) ListenUpdates(ctx context.Context, msgModel *messages.Model, ca
 	u.Timeout = 60
 
 	updates := c.client.GetUpdatesChan(u)
-	log.Println("listening for messages")
+	logger.Info("start listening telegram server for new messages")
 
 	for update := range updates {
 		if update.CallbackQuery != nil {
 			err := callbackModel.HandleIncomingCallback(ctx, update.CallbackQuery)
 			if err != nil {
-				log.Println(errors.Wrap(err, "error processing callback"))
+				logger.Error("error occurred while processing callback", zap.Error(err))
 				continue
 			}
 		}
 		if update.Message != nil {
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
 			err := msgModel.IncomingMessage(ctx, messages.Message{
 				Text:   update.Message.Text,
 				UserID: update.Message.From.ID,
 			})
 			if err != nil {
-				log.Println(errors.Wrap(err, "error processing message"))
+				logger.Error("error occurred while processing message", zap.Error(err))
 				continue
 			}
 		}

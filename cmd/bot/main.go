@@ -2,26 +2,44 @@ package main
 
 import (
 	"context"
-	"github.com/pkg/errors"
+	"flag"
+	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/service"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/tracing"
+	"net/http"
+	"os"
+	"os/signal"
+
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/clients/abstract"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/clients/telegram"
 	config2 "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/config"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/db"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model/callbacks"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model/messages"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/repository"
-	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/service"
-	"log"
-	"os"
-	"os/signal"
+	"go.uber.org/zap"
 )
 
 func main() {
+	tracing.InitTracing()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 
 	config, err := config2.New()
 	handleError(err, "config init failed")
+
+	http.Handle("/metrics", promhttp.Handler())
+	go func() {
+		port := flag.Int("port", 9095, "the port to listen")
+		logger.Info("starting http server", zap.Int("port", *port))
+		err := http.ListenAndServe(fmt.Sprintf(":%d", *port), nil)
+		if err != nil {
+			logger.Fatal("error starting http server", zap.Error(err))
+		}
+	}()
 
 	// ----- clients -----
 	telegramClient, err := telegram.New(config)
@@ -59,6 +77,6 @@ func main() {
 
 func handleError(err error, message string) {
 	if err != nil {
-		log.Fatal(errors.Wrap(err, message))
+		logger.Fatal(message, zap.Error(err))
 	}
 }

@@ -4,6 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
+
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/metrics"
+
+	"github.com/opentracing/opentracing-go"
+
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
+	"go.uber.org/zap"
 
 	"github.com/samber/lo"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
@@ -16,7 +24,7 @@ type UserStore interface {
 }
 
 type CategoryStore interface {
-	GetCategories(ctx context.Context) (category []model.CategoryData, err error)
+	GetAllCategories(ctx context.Context) (category []model.CategoryData, err error)
 }
 
 type MessageSender interface {
@@ -47,39 +55,56 @@ type Message struct {
 }
 
 func (s *Model) IncomingMessage(ctx context.Context, msg Message) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "IncomingMessage")
+	defer span.Finish()
+
+	span.SetTag("command", msg.Text)
+	span.SetTag("userID", msg.UserID)
+
+	modelType := "callback"
+	operation := "unrecognized"
+	status := "ok"
+	start := time.Now()
+	defer func() {
+		tookTime := time.Since(start).Seconds()
+		metrics.IncomingRequestsTotalCounter.WithLabelValues(modelType, operation, status).Inc()
+		metrics.IncomingRequestsHistogramResponseTime.WithLabelValues(modelType, operation, status).Observe(tookTime)
+	}()
+
+	var err error
 	switch msg.Text {
 	case "/" + constants.Start:
-		err := s.userRepo.SetUserCurrency(ctx, msg.UserID, constants.ServerCurrency)
-		if err != nil {
-			return s.tgClient.SendMessage(constants.InternalServerErrorMsg, msg.UserID)
-		}
-		return s.tgClient.SendMessage(constants.HelloMsg, msg.UserID)
+		err = s.start(ctx, msg)
 	case "/" + constants.AddOperation:
-		return s.chooseCategory(ctx, msg.UserID, constants.AddOperation)
+		err = s.chooseCategory(ctx, msg.UserID, constants.AddOperation)
 	case "/" + constants.SetLimitation:
-		return s.chooseCategory(ctx, msg.UserID, constants.SetLimitation)
+		err = s.chooseCategory(ctx, msg.UserID, constants.SetLimitation)
 	case "/" + constants.ShowCategoryList:
-		categories, err := s.categoryRepo.GetCategories(ctx)
-		if err != nil {
-			return s.tgClient.SendMessage(constants.InternalServerErrorMsg, msg.UserID)
-		}
-		return s.tgClient.SendMessage(formatCategoryList(categories), msg.UserID)
+		err = s.showCategories(ctx, msg)
 	case "/" + constants.ChangeCurrency:
-		userCurrencies, err := s.userRepo.GetCurrenciesFilteredByUser(ctx, msg.UserID)
-		if err != nil {
-			return s.tgClient.SendMessage(constants.CannotShowCurrencyMenuMsg, msg.UserID)
-		}
-		return s.tgClient.SendMessageWithMarkup(constants.SpecifyCurrencyMsg, getCurrencies(userCurrencies), msg.UserID)
+		err = s.changeCurrency(ctx, msg)
 	case "/" + constants.ShowReport:
-		return s.tgClient.SendMessageWithMarkup(constants.SpecifyPeriodMsg, getPeriods(), msg.UserID)
+		err = s.showReport(ctx, msg)
 	default:
-		return s.tgClient.SendMessage(constants.UnrecognizedCommandMsg, msg.UserID)
+		operation = "unrecognized"
+		err = s.tgClient.SendMessage(constants.UnrecognizedCommandMsg, msg.UserID)
 	}
+	if err != nil {
+		status = "error"
+	}
+	return err
 }
 
 func (s *Model) chooseCategory(ctx context.Context, userID int64, operation string) error {
-	categories, err := s.categoryRepo.GetCategories(ctx)
+	span, ctx := opentracing.StartSpanFromContext(ctx, operation)
+	defer span.Finish()
+
+	categories, err := s.categoryRepo.GetAllCategories(ctx)
 	if err != nil {
+		logger.Error("cannot make choosing category",
+			zap.Int64("userID", userID),
+			zap.String("operation", operation),
+			zap.Error(err))
 		return s.tgClient.SendMessage(constants.InternalServerErrorMsg, userID)
 	}
 	return s.tgClient.SendMessageWithMarkup(constants.SpecifyCategoryMsg, s.collectCategories(categories, operation), userID)

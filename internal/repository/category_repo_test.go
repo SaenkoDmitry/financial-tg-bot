@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCategoryRepository(t *testing.T) {
@@ -14,7 +15,7 @@ func TestCategoryRepository(t *testing.T) {
 	repository := NewCategoryRepository(connPool)
 
 	t.Run("getting category list", func(t *testing.T) {
-		categories, err := repository.GetCategories(ctx)
+		categories, err := repository.GetAllCategories(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 11, len(categories))
 	})

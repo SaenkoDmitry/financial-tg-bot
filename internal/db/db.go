@@ -3,10 +3,12 @@ package db
 import (
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/config"
-	"log"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
+	"go.uber.org/zap"
 )
 
 const (
@@ -23,13 +25,13 @@ func InitPool(cfg *config.Service) (*pgxpool.Pool, error) {
 	dsn := getDSN(cfg)
 	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Printf("Unable to parse DATABASE_URL=%s with error: %s", dsn, err.Error())
+		logger.Error("unable to init database connection pool", zap.String("url", dsn), zap.Error(err))
 		return nil, err
 	}
 
 	pool, err := pgxpool.ConnectConfig(context.Background(), poolConfig)
 	if err != nil {
-		log.Printf("Unable to create connection pool: %s", err.Error())
+		logger.Error("unable to create database connection pool", zap.String("url", dsn), zap.Error(err))
 		return nil, err
 	}
 
