@@ -3,8 +3,13 @@ package repository
 import (
 	"context"
 	"fmt"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/opentracing/opentracing-go"
+
+	"github.com/lib/pq"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
+	"go.uber.org/zap"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/shopspring/decimal"
@@ -24,12 +29,17 @@ const onDateTimeFormat = "2006-01-02"
 
 func (r RateRepository) GetBatch(ctx context.Context, dates []time.Time,
 	currencies []string) (rates map[string]map[string]decimal.Decimal, err error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db:GetBatch")
+	defer span.Finish()
+
 	// language=SQL
-	rows, err := r.pool.Query(ctx, `SELECT currency_id, multiplier, on_date 
+	sql := `SELECT currency_id, multiplier, on_date 
 			FROM financial_bot.rate 
-			WHERE currency_id = ANY($1) AND on_date = ANY($2)`,
-		pq.Array(currencies), pq.Array(dates))
+			WHERE currency_id = ANY($1) AND on_date = ANY($2)`
+	span.SetTag("sql", sql)
+	rows, err := r.pool.Query(ctx, sql, pq.Array(currencies), pq.Array(dates))
 	if err != nil {
+		span.SetTag("error", err.Error())
 		return nil, fmt.Errorf("cannot extract rates by currencies=%v", currencies)
 	}
 	defer rows.Close()
@@ -40,6 +50,7 @@ func (r RateRepository) GetBatch(ctx context.Context, dates []time.Time,
 		var multiplier decimal.Decimal
 		err = rows.Scan(&currencyID, &multiplier, &onDate)
 		if err != nil {
+			span.SetTag("error", err.Error())
 			return nil, fmt.Errorf("cannot extract rates batch: %s", err.Error())
 		}
 		onDateStr := onDate.Format(onDateTimeFormat)
@@ -52,6 +63,9 @@ func (r RateRepository) GetBatch(ctx context.Context, dates []time.Time,
 }
 
 func (r RateRepository) SaveAll(ctx context.Context, rates map[string]decimal.Decimal, inputDate time.Time) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db:SaveAll")
+	defer span.Finish()
+
 	if len(rates) == 0 {
 		return nil
 	}
@@ -64,30 +78,44 @@ func (r RateRepository) SaveAll(ctx context.Context, rates map[string]decimal.De
 		dates = append(dates, inputDate)
 	}
 	// language=SQL
-	_, err := r.pool.Exec(ctx, `INSERT INTO financial_bot.rate (currency_id, multiplier, on_date) 
+	sql := `INSERT INTO financial_bot.rate (currency_id, multiplier, on_date) 
 			(SELECT 
 				unnest($1::TEXT[]) AS currency_id,
 				unnest($2::NUMERIC[]) AS multiplier,
 				unnest($3::DATE[]) AS on_date
  			)
-			ON CONFLICT (currency_id, on_date) DO UPDATE SET multiplier = EXCLUDED.multiplier`,
-		pq.Array(currencies), pq.Array(multipliers), pq.Array(dates))
+			ON CONFLICT (currency_id, on_date) DO UPDATE SET multiplier = EXCLUDED.multiplier`
+	span.SetTag("sql", sql)
+	_, err := r.pool.Exec(ctx, sql, pq.Array(currencies), pq.Array(multipliers), pq.Array(dates))
 	if err != nil {
-		return fmt.Errorf("cannot execute batch save rates: %s", err.Error())
+		span.SetTag("error", err.Error())
+		logger.Error("cannot execute batch save rates",
+			zap.Time("inputDate", inputDate),
+			zap.Error(err))
+		return err
 	}
 	return nil
 }
 
 func (r RateRepository) GetDatesWithoutRate(ctx context.Context, userID int64, startedFrom time.Time) ([]time.Time, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "db:GetDatesWithoutRate")
+	defer span.Finish()
+
 	// language=SQL
-	rows, err := r.pool.Query(ctx, `SELECT t.created_at::DATE
+	sql := `SELECT t.created_at::DATE
     	FROM financial_bot.transaction t
         	JOIN financial_bot.user u ON t.user_id = u.id
         	LEFT JOIN financial_bot.rate r ON t.created_at::DATE = r.on_date AND r.currency_id = u.currency_id
-    	WHERE t.user_id = $1 AND t.created_at > $2 AND r.multiplier IS NULL`,
-		userID, startedFrom)
+    	WHERE t.user_id = $1 AND t.created_at > $2 AND r.multiplier IS NULL`
+	span.SetTag("sql", sql)
+	rows, err := r.pool.Query(ctx, sql, userID, startedFrom)
 	if err != nil {
-		return nil, fmt.Errorf("cannot extract dates without rates: %s", err.Error())
+		span.SetTag("error", err.Error())
+		logger.Error("cannot extract dates without rates",
+			zap.Int64("userID", userID),
+			zap.Time("startedFrom", startedFrom),
+			zap.Error(err))
+		return nil, err
 	}
 	defer rows.Close()
 	dates := make([]time.Time, 0)
@@ -95,7 +123,12 @@ func (r RateRepository) GetDatesWithoutRate(ctx context.Context, userID int64, s
 		var onDate time.Time
 		err = rows.Scan(&onDate)
 		if err != nil {
-			return nil, fmt.Errorf("cannot extract rates without rates: %s", err.Error())
+			span.SetTag("error", err.Error())
+			logger.Error("cannot extract rates without rates",
+				zap.Int64("userID", userID),
+				zap.Time("startedFrom", startedFrom),
+				zap.Error(err))
+			return nil, err
 		}
 		dates = append(dates, onDate)
 	}

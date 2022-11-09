@@ -2,13 +2,14 @@ package service
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
 	serviceMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/service"
-	"testing"
-	"time"
 )
 
 const (
@@ -32,7 +33,7 @@ func TestFinanceCalculatorService_CalcByCurrentWeek(t *testing.T) {
 	currencyExchangeClientMock := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	transactionRepoMock := serviceMocks.NewMockTransactionStore(ctrl)
 	rateRepoMock := serviceMocks.NewMockRateStore(ctrl)
-	transactionRepoMock.EXPECT().CalcAmountByPeriod(ctx, userID, gomock.Any(), currencyID).Return(weekExpensesExpected, nil)
+	transactionRepoMock.EXPECT().CalcAmountByPeriod(gomock.Any(), userID, gomock.Any(), currencyID).Return(weekExpensesExpected, nil)
 	currencyExchangeClientMock.EXPECT().GetLiveCurrency(ctx).Times(1)
 	rateRepoMock.EXPECT().GetBatch(ctx, gomock.Any(), gomock.Any()).Times(1)
 	rateRepoMock.EXPECT().SaveAll(ctx, gomock.Any(), gomock.Any())
@@ -84,7 +85,7 @@ func TestFinanceCalculatorService_CalcByCurrentMonth(t *testing.T) {
 	currencyExchangeClientMock := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	transactionRepoMock := serviceMocks.NewMockTransactionStore(ctrl)
 	rateRepoMock := serviceMocks.NewMockRateStore(ctrl)
-	transactionRepoMock.EXPECT().CalcAmountByPeriod(ctx, userID, gomock.Any(), currencyID).Return(monthExpensesExpected, nil)
+	transactionRepoMock.EXPECT().CalcAmountByPeriod(gomock.Any(), userID, gomock.Any(), currencyID).Return(monthExpensesExpected, nil)
 	currencyExchangeClientMock.EXPECT().GetLiveCurrency(ctx).Times(1)
 	rateRepoMock.EXPECT().GetBatch(ctx, gomock.Any(), gomock.Any()).Times(1)
 	rateRepoMock.EXPECT().SaveAll(ctx, gomock.Any(), gomock.Any())
@@ -137,7 +138,7 @@ func TestFinanceCalculatorService_CalcByCurrentYear(t *testing.T) {
 	currencyExchangeClientMock := serviceMocks.NewMockCurrencyExtractor(ctrl)
 	transactionRepoMock := serviceMocks.NewMockTransactionStore(ctrl)
 	rateRepoMock := serviceMocks.NewMockRateStore(ctrl)
-	transactionRepoMock.EXPECT().CalcAmountByPeriod(ctx, userID, gomock.Any(), currencyID).Return(yearExpensesExpected, nil)
+	transactionRepoMock.EXPECT().CalcAmountByPeriod(gomock.Any(), userID, gomock.Any(), currencyID).Return(yearExpensesExpected, nil)
 	currencyExchangeClientMock.EXPECT().GetLiveCurrency(ctx).Times(1)
 	rateRepoMock.EXPECT().GetBatch(ctx, gomock.Any(), gomock.Any()).Times(1)
 	rateRepoMock.EXPECT().SaveAll(ctx, gomock.Any(), gomock.Any())

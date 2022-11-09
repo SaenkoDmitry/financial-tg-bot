@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	serviceMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/service"
-	"testing"
-	"time"
 )
 
 func Test_currencyExchangeService_GetMultiplier_CustomCurrency(t *testing.T) {

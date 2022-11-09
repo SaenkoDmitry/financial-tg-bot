@@ -6,6 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
+	"go.uber.org/zap"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/shopspring/decimal"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
@@ -13,42 +18,64 @@ import (
 )
 
 func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.CallbackQuery, params ...string) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, constants.AddOperation)
+	defer span.Finish()
+
 	input, err := s.parseCategoryWithAmountInputData(ctx, params, query)
 	if err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot parse input while adding new operation", zap.Error(err))
 		return err
 	}
+	span.SetTag("parse input category", "success")
 
-	if err, done := s.makeProcessOfEnteringAmount(params, input, query); err != nil || done {
+	if err, needBreak := s.makeProcessOfEnteringAmount(params, input, query); err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot parse amount while adding new operation", zap.Error(err))
 		return err
+	} else if needBreak {
+		return nil
 	}
+	span.SetTag("parse input amount", "success")
 
 	multiplier, err := s.rateService.GetMultiplier(ctx, input.Currency, time.Now())
 	if err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot get multiplier while adding new operation", zap.Error(err))
 		return s.tgClient.SendEditMessage(fmt.Sprintf(constants.CannotGetRateForYouMsg, constants.ServerCurrency),
 			input.UserID, input.MessageID)
 	}
+	span.SetTag("got multiplier", multiplier.String())
 
 	amount := input.Amount.Div(multiplier)
 
 	// resolve categories to display
 	categories, err := s.categoryRepo.ResolveCategories(ctx, []string{input.CategoryID})
 	if err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot resolve categories while adding new operation", zap.Error(err))
 		return s.tgClient.SendMessage(constants.InternalServerErrorMsg, input.UserID)
 	}
 
 	// persist data
 	err = s.transactionRepo.AddOperation(ctx, input.UserID, input.CategoryID, amount, time.Now())
 	if err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot persist data while adding new operation", zap.Error(err))
 		return err
 	}
 
 	spend, err := s.getSpendSinceStartOfMonth(ctx, input, multiplier)
 	if err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot get operations since start of month while adding new operation", zap.Error(err))
 		return err
 	}
 
 	diff, exceeded, err := s.limitationRepo.CheckLimit(ctx, input.UserID, input.CategoryID, spend)
 	if err != nil {
+		span.SetTag("error", err.Error())
+		logger.Error("cannot check limit while adding new operation", zap.Error(err))
 		return err
 	}
 
@@ -60,6 +87,7 @@ func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.Callback
 		return s.tgClient.SendEditMessage(amountExceededText, input.UserID, input.MessageID)
 	}
 
+	span.SetTag("adding transaction", "success")
 	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, categories[input.CategoryID].Name, input.Amount.Round(2).String(), input.Currency)
 	return s.tgClient.SendEditMessage(transactionAddedText, input.UserID, input.MessageID)
 }

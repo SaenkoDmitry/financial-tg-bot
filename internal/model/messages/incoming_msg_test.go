@@ -2,10 +2,11 @@ package messages
 
 import (
 	"context"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/constants"
 	messagesMocks "gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mocks/messages"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +20,7 @@ func TestOnStartCommand_ShouldAnswerWithIntroMessage(t *testing.T) {
 	categoryRepoMock := messagesMocks.NewMockCategoryStore(ctrl)
 	model := New(sender, userRepoMock, categoryRepoMock)
 
-	userRepoMock.EXPECT().SetUserCurrency(ctx, int64(123), "RUB").Times(1)
+	userRepoMock.EXPECT().SetUserCurrency(gomock.Any(), int64(123), "RUB").Times(1)
 	sender.EXPECT().SendMessage(constants.HelloMsg, int64(123))
 
 	err := model.IncomingMessage(ctx, Message{

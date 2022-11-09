@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"sync"
 	"time"
+
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
 )
 
 type simpleCache struct {
@@ -37,13 +37,12 @@ func NewSimpleCache(ctx context.Context, defaultExpiration, cleanupInterval time
 		for {
 			select {
 			case <-ctx.Done():
-				fmt.Println("graceful shutdown")
+				logger.Info("graceful shutdown")
 				break
 			case <-t.C:
 				c.mutex.Lock()
 				for k, v := range c.inner {
 					if v.expired(time.Now().UnixNano()) {
-						log.Printf("%v has expires at %d", k, time.Now().UnixNano())
 						delete(c.inner, k)
 					}
 				}

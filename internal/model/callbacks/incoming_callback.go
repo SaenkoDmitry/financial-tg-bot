@@ -5,6 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/metrics"
+
+	"github.com/opentracing/opentracing-go"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -69,12 +73,30 @@ var (
 )
 
 func (s *Model) HandleIncomingCallback(ctx context.Context, query *tgbotapi.CallbackQuery) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "HandleIncomingCallback")
+	defer span.Finish()
+
+	span.SetTag("userID", query.From.ID)
+	span.SetTag("messageID", query.Message.MessageID)
+
+	modelType := "callback"
+	operation := "unrecognized"
+	status := "ok"
+	start := time.Now()
+	defer func() {
+		tookTime := time.Since(start).Seconds()
+		metrics.IncomingRequestsTotalCounter.WithLabelValues(modelType, operation, status).Inc()
+		metrics.IncomingRequestsHistogramResponseTime.WithLabelValues(modelType, operation, status).Observe(tookTime)
+	}()
+
 	split := strings.Split(query.Data, ":")
 	if len(split) == 0 {
+		status = "error"
 		return emptyCallbackErr
 	}
+	operation = split[0]
 	var err error
-	switch split[0] {
+	switch operation {
 	case constants.AddOperation:
 		err = s.handleAddOperation(ctx, query, split[1:]...)
 	case constants.SetLimitation:
@@ -83,6 +105,11 @@ func (s *Model) HandleIncomingCallback(ctx context.Context, query *tgbotapi.Call
 		err = s.handleShowReport(ctx, query, split[1:]...)
 	case constants.ChangeCurrency:
 		err = s.handleChangeCurrency(ctx, query, split[1:]...)
+	default:
+		operation = "unrecognized"
+	}
+	if err != nil {
+		status = "error"
 	}
 	return err
 }

@@ -1,10 +1,11 @@
 package service
 
 import (
-	"github.com/shopspring/decimal"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_simpleCache_Add(t *testing.T) {

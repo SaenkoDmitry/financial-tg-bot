@@ -2,10 +2,11 @@ package repository
 
 import (
 	"context"
-	"github.com/shopspring/decimal"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRateRepo(t *testing.T) {
