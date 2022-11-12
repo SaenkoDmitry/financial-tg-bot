@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/metrics"
@@ -51,9 +52,13 @@ func (s currencyExchangeService) GetMultiplier(ctx context.Context, currency str
 	if v, ok := s.rateCache.Get(key); ok {
 		metrics.RatesSourceCounter.WithLabelValues(metrics.CacheLabel).Inc()
 		metrics.CacheHitCounter.WithLabelValues(metrics.HitLabel).Inc()
-		temp := v.(map[string]decimal.Decimal)
-		span.SetTag("result", "returned value from cache")
-		return temp[currency], nil
+		var temp map[string]decimal.Decimal
+		err := json.Unmarshal([]byte(v), &temp)
+		if err == nil {
+			span.SetTag("result", "returned value from cache")
+			return temp[currency], nil
+		}
+		logger.Error("cannot unmarshal extracted value from cache", zap.Error(err))
 	}
 	metrics.CacheHitCounter.WithLabelValues(metrics.MissLabel).Inc()
 
@@ -141,7 +146,7 @@ func saveToCache(rateCache Cache, rates map[string]map[string]decimal.Decimal) {
 	}
 	for k, ratesForDay := range rates {
 		key := getCurrencyCacheKeyFromStr(k)
-		err := rateCache.Add(key, ratesForDay, defaultExpires)
+		err := rateCache.Add(key, toJson(ratesForDay), defaultExpires)
 		if err != nil {
 			logger.Error("cannot interact with cache", zap.Error(err))
 		}
@@ -157,8 +162,8 @@ func loadNewRates(ctx context.Context, ratesCache Cache, rateRepo RateStore, cli
 			return
 		}
 
-		// save to cache
-		err = ratesCache.Add(key, rates, defaultExpires)
+		// save to mem
+		err = ratesCache.Add(key, toJson(rates), defaultExpires)
 		if err != nil {
 			logger.Error("cannot interact with cache", zap.Error(err))
 		}
@@ -171,9 +176,18 @@ func loadNewRates(ctx context.Context, ratesCache Cache, rateRepo RateStore, cli
 	}
 }
 
+func toJson(input interface{}) string {
+	b, err := json.Marshal(input)
+	if err != nil {
+		logger.Error("cannot marshal to json")
+		return ""
+	}
+	return string(b)
+}
+
 type Cache interface {
-	Get(k string) (interface{}, bool)
-	Add(k string, x interface{}, d time.Duration) error
+	Get(k string) (string, bool)
+	Add(k string, x string, d time.Duration) error
 }
 
 func NewCurrencyExchangeService(ctx context.Context, currencyClient CurrencyExtractor, rateCache Cache,

@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/service"
-	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/tracing"
 	"net/http"
 	"os"
 	"os/signal"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/mem"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/service"
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/tracing"
 
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/clients/abstract"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/clients/telegram"
@@ -60,17 +62,18 @@ func main() {
 	limitationRepo := repository.NewLimitationRepository(dbPool)
 
 	// ----- services -----
-	//ratesCache := cache.New(defaultExpiration, cleanupInterval)
-	simpleCache := service.NewSimpleCache(ctx, config.RatesCacheDefaultExpiration(), config.RatesCacheCleanupInterval())
+	//ratesCache := mem.New(defaultExpiration, cleanupInterval)
+	//simpleCache := service.NewSimpleCache(ctx, config.RatesCacheDefaultExpiration(), config.RatesCacheCleanupInterval())
+	memcached := mem.NewMemcached(config.CacheHost())
 
-	rateService := service.NewCurrencyExchangeService(ctx, abstractClient, simpleCache, rateRepo)
+	rateService := service.NewCurrencyExchangeService(ctx, abstractClient, memcached, rateRepo)
 
-	calcService := service.NewCalculatorService(transactionRepo, rateRepo, rateService)
+	calcService := service.NewCalculatorService(config, transactionRepo, rateRepo, rateService, memcached)
 
 	// ----- logic -----
 	msgModel := messages.New(telegramClient, userRepo, categoryRepo)
 	callbackModel := callbacks.New(telegramClient, transactionRepo, userRepo, categoryRepo, limitationRepo,
-		rateService, calcService)
+		rateService, calcService, memcached)
 
 	telegramClient.ListenUpdates(ctx, msgModel, callbackModel)
 }

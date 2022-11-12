@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/utils"
+
 	"github.com/opentracing/opentracing-go"
 
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
@@ -65,6 +67,10 @@ func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.Callback
 		return err
 	}
 
+	s.deleteCacheValueForPeriod(input, 7)
+	s.deleteCacheValueForPeriod(input, 30)
+	s.deleteCacheValueForPeriod(input, 365)
+
 	spend, err := s.getSpendSinceStartOfMonth(ctx, input, multiplier)
 	if err != nil {
 		span.SetTag("error", err.Error())
@@ -90,6 +96,13 @@ func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.Callback
 	span.SetTag("adding transaction", "success")
 	transactionAddedText := fmt.Sprintf(constants.TransactionAddedMsg, categories[input.CategoryID].Name, input.Amount.Round(2).String(), input.Currency)
 	return s.tgClient.SendEditMessage(transactionAddedText, input.UserID, input.MessageID)
+}
+
+func (s *Model) deleteCacheValueForPeriod(input *addOperationInputData, days int64) {
+	key := utils.GetCalcCacheKey(input.UserID, input.Currency, days)
+	if err := s.reportCache.Delete(key); err != nil {
+		logger.Warn("cannot delete value from cache for period", zap.Error(err))
+	}
 }
 
 func (s *Model) getSpendSinceStartOfMonth(ctx context.Context, input *addOperationInputData, multiplier decimal.Decimal) (decimal.Decimal, error) {

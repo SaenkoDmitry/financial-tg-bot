@@ -13,12 +13,14 @@ type Config struct {
 	Token                       string        `yaml:"token"`
 	AbstractAPIKey              string        `yaml:"abstract_api_key"`
 	RatesCacheDefaultExpiration time.Duration `yaml:"rates_cache_default_expiration"`
+	CalcCacheDefaultExpiration  time.Duration `yaml:"calc_cache_default_expiration"`
 	RatesCacheCleanupInterval   time.Duration `yaml:"rates_cache_cleanup_interval"`
 	PostgresUser                string        `yaml:"postgres_user"`
 	PostgresPassword            string        `yaml:"postgres_password"`
 	PostgresDB                  string        `yaml:"postgres_db"`
 	PostgresHost                string        `yaml:"postgres_host"`
 	PostgresPort                string        `yaml:"postgres_port"`
+	CacheHost                   string        `yaml:"cache_host"`
 }
 
 type Service struct {
@@ -53,6 +55,10 @@ func (s *Service) RatesCacheDefaultExpiration() time.Duration {
 	return s.config.RatesCacheDefaultExpiration
 }
 
+func (s *Service) CalcCacheDefaultExpiration() time.Duration {
+	return s.config.CalcCacheDefaultExpiration
+}
+
 func (s *Service) RatesCacheCleanupInterval() time.Duration {
 	return s.config.RatesCacheCleanupInterval
 }
@@ -75,4 +81,8 @@ func (s *Service) PostgresHost() string {
 
 func (s *Service) PostgresPort() string {
 	return s.config.PostgresPort
+}
+
+func (s *Service) CacheHost() string {
+	return s.config.CacheHost
 }

@@ -38,6 +38,12 @@ type CurrencyExchanger interface {
 	GetMultiplier(ctx context.Context, currency string, date time.Time) (decimal.Decimal, error)
 }
 
+type Cache interface {
+	Get(k string) (string, bool)
+	Add(k string, x string, d time.Duration) error
+	Delete(key string) error
+}
+
 type Calculator interface {
 	CalcByCurrentWeek(ctx context.Context, userID int64, currency string) (map[string]decimal.Decimal, error)
 	CalcByCurrentMonth(ctx context.Context, userID int64, currency string) (map[string]decimal.Decimal, error)
@@ -53,10 +59,11 @@ type Model struct {
 	limitationRepo  LimitationRepo
 	rateService     CurrencyExchanger
 	calcService     Calculator
+	reportCache     Cache
 }
 
 func New(tgClient CallbackSender, transactionRepo TransactionStore, userRepo UserStore, categoryRepo CategoryStore,
-	limitationRepo LimitationRepo, rateService CurrencyExchanger, calcService Calculator) *Model {
+	limitationRepo LimitationRepo, rateService CurrencyExchanger, calcService Calculator, reportCache Cache) *Model {
 	return &Model{
 		tgClient:        tgClient,
 		transactionRepo: transactionRepo,
@@ -65,6 +72,7 @@ func New(tgClient CallbackSender, transactionRepo TransactionStore, userRepo Use
 		limitationRepo:  limitationRepo,
 		rateService:     rateService,
 		calcService:     calcService,
+		reportCache:     reportCache,
 	}
 }
 

@@ -20,6 +20,10 @@ func Debug(msg string, fields ...zap.Field) {
 	logger.Debug(msg, fields...)
 }
 
+func Warn(msg string, fields ...zap.Field) {
+	logger.Warn(msg, fields...)
+}
+
 func Info(msg string, fields ...zap.Field) {
 	logger.Info(msg, fields...)
 }

@@ -157,7 +157,7 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockCache) Add(k string, x interface{}, d time.Duration) error {
+func (m *MockCache) Add(k, x string, d time.Duration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", k, x, d)
 	ret0, _ := ret[0].(error)
@@ -171,10 +171,10 @@ func (mr *MockCacheMockRecorder) Add(k, x, d interface{}) *gomock.Call {
 }
 
 // Get mocks base method.
-func (m *MockCache) Get(k string) (interface{}, bool) {
+func (m *MockCache) Get(k string) (string, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", k)
-	ret0, _ := ret[0].(interface{})
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }

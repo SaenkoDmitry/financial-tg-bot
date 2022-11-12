@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"time"
+
+	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/utils"
 
 	"github.com/opentracing/opentracing-go"
 
@@ -21,21 +24,25 @@ type CurrencyExchanger interface {
 	GetMultiplier(ctx context.Context, currency string, date time.Time) (decimal.Decimal, error)
 }
 
+type CalculatorConfig interface {
+	CalcCacheDefaultExpiration() time.Duration
+}
+
 type calculatorService struct {
 	transactionRepo TransactionStore
 	rateRepo        RateStore
 	rateService     CurrencyExchanger
+	reportCache     Cache
+	config          CalculatorConfig
 }
 
-func NewCalculatorService(
-	transactionRepo TransactionStore,
-	rateRepo RateStore,
-	rateService CurrencyExchanger,
-) *calculatorService {
+func NewCalculatorService(config CalculatorConfig, transactionRepo TransactionStore, rateRepo RateStore, rateService CurrencyExchanger, reportCache Cache) *calculatorService {
 	return &calculatorService{
+		config:          config,
 		transactionRepo: transactionRepo,
 		rateRepo:        rateRepo,
 		rateService:     rateService,
+		reportCache:     reportCache,
 	}
 }
 
@@ -55,9 +62,18 @@ func (c *calculatorService) CalcSinceStartOfMonth(ctx context.Context, userID in
 	return c.calcBy(ctx, "CalcSinceStartOfMonth", userID, days, currency)
 }
 
-func (c *calculatorService) calcBy(ctx context.Context, operationName string, userID, days int64, currency string) (map[string]decimal.Decimal, error) {
+func (c *calculatorService) calcBy(ctx context.Context, operationName string,
+	userID, days int64, currency string) (map[string]decimal.Decimal, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, operationName)
 	defer span.Finish()
+
+	cacheKey := utils.GetCalcCacheKey(userID, currency, days)
+	if res, ok := c.reportCache.Get(cacheKey); ok {
+		var temp map[string]decimal.Decimal
+		if err := json.Unmarshal([]byte(res), &temp); err == nil {
+			return temp, nil
+		}
+	}
 
 	momentInThePast := time.Now().Add(-time.Hour * 24 * time.Duration(days))
 	if currency != constants.ServerCurrency {
@@ -88,5 +104,11 @@ func (c *calculatorService) calcBy(ctx context.Context, operationName string, us
 		return nil, err
 	}
 
+	if b, err := json.Marshal(expenses); err == nil {
+		err2 := c.reportCache.Add(cacheKey, string(b), c.config.CalcCacheDefaultExpiration())
+		if err2 != nil {
+			logger.Warn("cannot save calculated report to cache while requesting report", zap.Error(err2))
+		}
+	}
 	return expenses, nil
 }
