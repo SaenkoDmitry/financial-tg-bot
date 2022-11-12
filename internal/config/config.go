@@ -20,6 +20,7 @@ type Config struct {
 	PostgresDB                  string        `yaml:"postgres_db"`
 	PostgresHost                string        `yaml:"postgres_host"`
 	PostgresPort                string        `yaml:"postgres_port"`
+	CacheHost                   string        `yaml:"cache_host"`
 }
 
 type Service struct {
@@ -80,4 +81,8 @@ func (s *Service) PostgresHost() string {
 
 func (s *Service) PostgresPort() string {
 	return s.config.PostgresPort
+}
+
+func (s *Service) CacheHost() string {
+	return s.config.CacheHost
 }

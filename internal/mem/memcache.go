@@ -35,3 +35,11 @@ func (m *Memcached) Add(key string, val string, d time.Duration) error {
 	}
 	return nil
 }
+
+func (m *Memcached) Delete(key string) error {
+	if err := m.mc.Delete(key); err != nil {
+		logger.Error("cannot remove value from cache")
+		return fmt.Errorf("cannot remove value from cache")
+	}
+	return nil
+}

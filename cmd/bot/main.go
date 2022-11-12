@@ -64,7 +64,7 @@ func main() {
 	// ----- services -----
 	//ratesCache := mem.New(defaultExpiration, cleanupInterval)
 	//simpleCache := service.NewSimpleCache(ctx, config.RatesCacheDefaultExpiration(), config.RatesCacheCleanupInterval())
-	memcached := mem.NewMemcached("127.0.0.1:11211")
+	memcached := mem.NewMemcached(config.CacheHost())
 
 	rateService := service.NewCurrencyExchangeService(ctx, abstractClient, memcached, rateRepo)
 
@@ -73,7 +73,7 @@ func main() {
 	// ----- logic -----
 	msgModel := messages.New(telegramClient, userRepo, categoryRepo)
 	callbackModel := callbacks.New(telegramClient, transactionRepo, userRepo, categoryRepo, limitationRepo,
-		rateService, calcService)
+		rateService, calcService, memcached)
 
 	telegramClient.ListenUpdates(ctx, msgModel, callbackModel)
 }

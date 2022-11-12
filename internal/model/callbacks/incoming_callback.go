@@ -41,6 +41,7 @@ type CurrencyExchanger interface {
 type Cache interface {
 	Get(k string) (string, bool)
 	Add(k string, x string, d time.Duration) error
+	Delete(key string) error
 }
 
 type Calculator interface {
@@ -62,7 +63,7 @@ type Model struct {
 }
 
 func New(tgClient CallbackSender, transactionRepo TransactionStore, userRepo UserStore, categoryRepo CategoryStore,
-	limitationRepo LimitationRepo, rateService CurrencyExchanger, calcService Calculator) *Model {
+	limitationRepo LimitationRepo, rateService CurrencyExchanger, calcService Calculator, reportCache Cache) *Model {
 	return &Model{
 		tgClient:        tgClient,
 		transactionRepo: transactionRepo,
@@ -71,6 +72,7 @@ func New(tgClient CallbackSender, transactionRepo TransactionStore, userRepo Use
 		limitationRepo:  limitationRepo,
 		rateService:     rateService,
 		calcService:     calcService,
+		reportCache:     reportCache,
 	}
 }
 
