@@ -1,7 +1,44 @@
 version: '3'
 
 services:
+  db:
+    container_name: db
+    image: postgres:latest
+    ports:
+      - '5432:5432'
+    networks:
+      - backend
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: route256
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
   memcached:
+    container_name: memcached
     image: memcached:latest
     ports:
       - '11211:11211'
+    networks:
+      - backend
+    restart: unless-stopped
+  server:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    depends_on:
+      - memcached
+      - db
+    ports:
+      - "9095:9095"
+    restart: unless-stopped
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data:

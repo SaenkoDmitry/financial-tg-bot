@@ -6,8 +6,8 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"

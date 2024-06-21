@@ -3,8 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/config"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
@@ -29,10 +31,18 @@ func InitPool(cfg *config.Service) (*pgxpool.Pool, error) {
 		return nil, err
 	}
 
-	pool, err := pgxpool.ConnectConfig(context.Background(), poolConfig)
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		logger.Error("unable to create database connection pool", zap.String("url", dsn), zap.Error(err))
 		return nil, err
+	}
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		panic(err)
+	}
+	db := stdlib.OpenDBFromPool(pool)
+	if err := goose.Up(db, "migrations"); err != nil {
+		panic(err)
 	}
 
 	return pool, nil

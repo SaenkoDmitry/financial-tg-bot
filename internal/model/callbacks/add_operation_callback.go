@@ -49,6 +49,9 @@ func (s *Model) handleAddOperation(ctx context.Context, query *tgbotapi.Callback
 	}
 	span.SetTag("got multiplier", multiplier.String())
 
+	if multiplier.IsZero() {
+		multiplier = decimal.NewFromInt(1)
+	}
 	amount := input.Amount.Div(multiplier)
 
 	// resolve categories to display

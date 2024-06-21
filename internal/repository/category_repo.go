@@ -5,7 +5,7 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/samber/lo"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/logger"
 	"gitlab.ozon.dev/dmitryssaenko/financial-tg-bot/internal/model"
