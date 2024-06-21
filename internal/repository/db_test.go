@@ -62,7 +62,7 @@ func SetupTestDatabase() (testcontainers.Container, *pgxpool.Pool) {
 
 	// 3.2 Create db connection string and connect
 	dbURI := fmt.Sprintf("postgres://postgres:postgres@%v:%v/route256?sslmode=disable", host, port.Port())
-	connPool, _ := pgxpool.Connect(context.Background(), dbURI)
+	connPool, _ := pgxpool.New(context.Background(), dbURI)
 
 	// todo : generate data ?
 	_ = MigrateDb(dbURI)
