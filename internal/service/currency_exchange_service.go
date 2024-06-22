@@ -54,7 +54,7 @@ func (s currencyExchangeService) GetMultiplier(ctx context.Context, currency str
 		metrics.CacheHitCounter.WithLabelValues(metrics.HitLabel).Inc()
 		var temp map[string]decimal.Decimal
 		err := json.Unmarshal([]byte(v), &temp)
-		if err == nil {
+		if err == nil && len(temp) > 0 {
 			span.SetTag("result", "returned value from cache")
 			return temp[currency], nil
 		}
@@ -109,6 +109,7 @@ func (s currencyExchangeService) GetMultiplier(ctx context.Context, currency str
 
 	multiplier, ok := rates[currency]
 	if !ok {
+		err = errors.New(constants.UndefinedCurrencyMsg)
 		span.SetTag("error", err.Error())
 		logger.Error("cannot load correct rate for currency", zap.String("currency", currency), zap.Error(err))
 		return decimal.Decimal{}, errors.New(constants.UndefinedCurrencyMsg)

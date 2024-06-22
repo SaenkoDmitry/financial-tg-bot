@@ -89,7 +89,6 @@ func (c *calculatorService) calcBy(ctx context.Context, operationName string,
 		}
 		for i := range dates { // try load new rates and persist if needed
 			c.rateService.GetMultiplier(ctx, currency, dates[i]) // nolint
-			time.Sleep(time.Second)                              // because API one request per second constraint
 		}
 	}
 

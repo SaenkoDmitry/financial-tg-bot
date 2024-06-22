@@ -1,11 +1,45 @@
-## financial bot
+# Financial Telegram Bot
 
-1. для удобства запуска миграций можно выполнить эту 'секретную' команду:
+## First Run
+```
+docker-compose up -d
+```
 
+Also you need store local config:
 ```
-export FINANCIAL_BOT_DB_USER=postgres && 
-export FINANCIAL_BOT_DB_PASS=pass && 
-export FINANCIAL_BOT_DB_HOST=localhost &&
-export FINANCIAL_BOT_DB_PORT=5432 &&
-export FINANCIAL_BOT_DB_NAME=route256
+rates_cache_default_expiration: 720h
+calc_cache_default_expiration: 24h
+rates_cache_cleanup_interval: 1h
+token: 
+abstract_api_key: 
+postgres_user:
+postgres_password:
+postgres_db:
+postgres_port:
+postgres_host: db
+cache_host: memcached:11211
 ```
+
+## Функционал
+
+### Главное меню приложения:
+<p align="left">
+  <img width="200" height="500" src="/screenshots/main_menu.png">
+</p>
+
+### Добавление новой траты с выбором категории:
+<p align="left">
+  <img width="200" height="500" src="/screenshots/add_operation.png">
+</p>
+
+### Отчет о совершенных тратах по категориям:
+<p align="left">
+  <img width="200" height="500" src="/screenshots/show_report.png">
+</p>
+
+### Установка лимита трат и сообщение о его превышении:
+<p align="left">
+  <img width="400" height="200" src="/screenshots/set_limit.jpg">
+  <img width="400" height="350" src="/screenshots/limit_notification.jpg">
+</p>
+

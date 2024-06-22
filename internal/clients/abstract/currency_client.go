@@ -45,6 +45,7 @@ func (s *CurrencyClient) GetLiveCurrency(ctx context.Context) (map[string]decima
 		logger.Error("cannot unmarshal response in method GetLiveCurrency", zap.Error(err))
 		return nil, err
 	}
+	time.Sleep(time.Second) // because API one request per second constraint
 	return result.ExchangeRates, nil
 }
 
@@ -62,6 +63,7 @@ func (s *CurrencyClient) GetHistoricalCurrency(ctx context.Context, day time.Tim
 		logger.Error("cannot unmarshal response in method GetHistoricalCurrency", zap.Error(err))
 		return nil, err
 	}
+	time.Sleep(time.Second) // because API one request per second constraint
 	return result.ExchangeRates, nil
 }
 
