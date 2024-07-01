@@ -22,18 +22,10 @@ cache_host: memcached:11211
 
 ## Функционал
 
-### Главное меню приложения:
+### Главное меню приложения / Добавление новой траты / Отчет о тратах по категориям :
 <p align="left">
-  <img width="200" height="500" src="/screenshots/main_menu.png">
-</p>
-
-### Добавление новой траты с выбором категории:
-<p align="left">
-  <img width="200" height="500" src="/screenshots/add_operation.png">
-</p>
-
-### Отчет о совершенных тратах по категориям:
-<p align="left">
+  <img width="200" height="500" src="/screenshots/main_menu.png">  
+  <img width="200" height="500" src="/screenshots/add_operation.png">  
   <img width="200" height="500" src="/screenshots/show_report.png">
 </p>
 
