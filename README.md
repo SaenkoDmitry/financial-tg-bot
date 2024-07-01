@@ -32,5 +32,5 @@ cache_host: memcached:11211
 ### Установка лимита трат и сообщение о его превышении:
 <p align="left">
   <img width="400" height="200" src="/screenshots/set_limit.jpg">
-  <img width="400" height="350" src="/screenshots/limit_notification.jpg">
+  <img width="300" height="250" src="/screenshots/limit_notification.jpg">
 </p>
