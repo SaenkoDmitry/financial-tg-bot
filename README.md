@@ -24,13 +24,13 @@ cache_host: memcached:11211
 
 ### Главное меню приложения / Добавление расходов / Отчет о расходах по категориям :
 <p align="left">
-  <img width="200" height="500" src="/screenshots/main_menu.png">  
-  <img width="200" height="500" src="/screenshots/add_operation.png">  
-  <img width="200" height="500" src="/screenshots/show_report.png">
+  <img width="200" height="450" src="/screenshots/main_menu.png">  
+  <img width="200" height="450" src="/screenshots/add_operation.png">  
+  <img width="200" height="450" src="/screenshots/show_report.png">
 </p>
 
 ### Установка лимита трат и сообщение о его превышении:
 <p align="left">
-  <img width="400" height="200" src="/screenshots/set_limit.jpg">
-  <img width="300" height="250" src="/screenshots/limit_notification.jpg">
+  <img width="350" height="200" src="/screenshots/set_limit.jpg">
+  <img width="250" height="200" src="/screenshots/limit_notification.jpg">
 </p>
