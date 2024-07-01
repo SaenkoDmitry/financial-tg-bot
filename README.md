@@ -22,7 +22,7 @@ cache_host: memcached:11211
 
 ## Функционал
 
-### Главное меню приложения / Добавление новой траты / Отчет о тратах по категориям :
+### Главное меню приложения / Добавление расходов / Отчет о расходах по категориям :
 <p align="left">
   <img width="200" height="500" src="/screenshots/main_menu.png">  
   <img width="200" height="500" src="/screenshots/add_operation.png">  
@@ -34,4 +34,3 @@ cache_host: memcached:11211
   <img width="400" height="200" src="/screenshots/set_limit.jpg">
   <img width="400" height="350" src="/screenshots/limit_notification.jpg">
 </p>
-
