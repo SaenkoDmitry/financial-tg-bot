@@ -1,4 +1,5 @@
 # Financial Telegram Bot
+@finance_for_you_bot
 
 ## First Run
 ```
